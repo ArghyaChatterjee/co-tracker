@@ -1,18 +1,5 @@
 # CoTracker3: Simpler and Better Point Tracking by Pseudo-Labelling Real Videos
 
-**[Meta AI Research, GenAI](https://ai.facebook.com/research/)**; **[University of Oxford, VGG](https://www.robots.ox.ac.uk/~vgg/)**
-
-[Nikita Karaev](https://nikitakaraevv.github.io/), [Iurii Makarov](https://linkedin.com/in/lvoursl), [Jianyuan Wang](https://jytime.github.io/), [Ignacio Rocco](https://www.irocco.info/), [Benjamin Graham](https://ai.facebook.com/people/benjamin-graham/), [Natalia Neverova](https://nneverova.github.io/), [Andrea Vedaldi](https://www.robots.ox.ac.uk/~vedaldi/), [Christian Rupprecht](https://chrirupp.github.io/)
-
-### [Project Page](https://cotracker3.github.io/) | [Paper #1](https://arxiv.org/abs/2307.07635) | [Paper #2](https://arxiv.org/abs/2410.11831) |  [X Thread](https://twitter.com/n_karaev/status/1742638906355470772) | [BibTeX](#citing-cotracker)
-
-<a target="_blank" href="https://colab.research.google.com/github/facebookresearch/co-tracker/blob/main/notebooks/demo.ipynb">
-  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
-</a>
-<a href="https://huggingface.co/spaces/facebook/cotracker">
-  <img alt="Spaces" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue">
-</a>
-
 <img width="1100" src="./assets/teaser.png" />
 
 **CoTracker** is a fast transformer-based model that can track any point in a video. It brings to tracking some of the benefits of Optical Flow.
@@ -25,25 +12,49 @@ CoTracker can track:
 
 Try these tracking modes for yourself with our [Colab demo](https://colab.research.google.com/github/facebookresearch/co-tracker/blob/master/notebooks/demo.ipynb) or in the [Hugging Face Space 🤗](https://huggingface.co/spaces/facebook/cotracker).
 
-**Updates:**
+## Requirements
+This work has been tested on ubuntu 24.04, Nvidia RTX 4070, GPU Driver 570, Cuda 12.8 and Python 3.12.
 
-- [January 21, 2025] 📦 Kubric Dataset used for CoTracker3 now available! This dataset contains **6,000 high-resolution sequences** (512×512px, 120 frames) with slight camera motion, rendered using the Kubric engine. Check it out on [Hugging Face Dataset](https://huggingface.co/datasets/facebook/CoTracker3_Kubric).
+# Installation
+For Python Virtual Environment:
+```shell
+git clone https://github.com/ArghyaChatterjee/co-tracker
+cd co-tracker
+python3 -m venv cotracker3_venv
+source cotracker3_venv/bin/activate
+pip install --upgrade pip
+pip install -e .
+pip install matplotlib flow_vis tqdm tensorboard imageio[ffmpeg]
+```
+## Download the model
+The easiest way to use CoTracker is to load a pretrained model from `torch.hub`.
 
-- [October 15, 2024] 📣 We're releasing CoTracker3! State-of-the-art point tracking with a lightweight architecture trained with 1000x less data than previous top-performing models. Code for baseline models and the pseudo-labeling pipeline are available in the repo, as well as model checkpoints. Check out our [paper](https://arxiv.org/abs/2410.11831) for more details.
-
-- [September 25, 2024]  CoTracker2.1 is now available! This model has better performance on TAP-Vid benchmarks and follows the architecture of the original CoTracker. Try it out!
-
-- [June 14, 2024]  We have released the code for [VGGSfM](https://github.com/facebookresearch/vggsfm), a model for recovering camera poses and 3D structure from any image sequences based on point tracking! VGGSfM is the first fully differentiable SfM framework that unlocks scalability and outperforms conventional SfM methods on standard benchmarks. 
-
-- [December 27, 2023]  CoTracker2 is now available! It can now track many more (up to **265*265**!) points jointly and it has a cleaner and more memory-efficient implementation. It also supports online processing. See the [updated paper](https://arxiv.org/abs/2307.07635) for more details. The old version remains available [here](https://github.com/facebookresearch/co-tracker/tree/8d364031971f6b3efec945dd15c468a183e58212).
-
-- [September 5, 2023] You can now run our Gradio demo [locally](./gradio_demo/app.py).
-
-## Quick start
-The easiest way to use CoTracker is to load a pretrained model from `torch.hub`:
+## Run the model
 
 ### Offline mode: 
-```pip install imageio[ffmpeg]```, then:
+Run CoTracker:
+```
+python3 demo_tracker.py \
+  --video_path left_seq.mp4 \
+  --mask_path door_knob_left_2001.jpg \
+  --out_dir ./cotracker_out \
+  --grid_size 12 \
+  --grid_query_frame 0 \
+  --downscale 1.0 \
+  --save_vis_video \
+  --offline
+```
+
+<div align="center">
+  <img src="assets/door_knob_left_2001.png" alt="Image Mask" width="400">
+  <img src="assets/cotracker_overlay.gif" alt="Video" width="400">
+  <br>
+  <b>Input Mask + Video</b>
+  &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
+  <b>Output Segmented Video</b>
+</div>
+
+A barebone version is here:
 ```python
 import torch
 # Download the video
@@ -60,6 +71,16 @@ video = torch.tensor(frames).permute(0, 3, 1, 2)[None].float().to(device)  # B T
 cotracker = torch.hub.load("facebookresearch/co-tracker", "cotracker3_offline").to(device)
 pred_tracks, pred_visibility = cotracker(video, grid_size=grid_size) # B T N 2,  B T N 1
 ```
+
+<div align="center">
+  <img src="assets/door_knob_left_2001.png" alt="Image Mask" width="400">
+  <img src="assets/cotracker_feature.gif" alt="Video" width="400">
+  <br>
+  <b>Input Mask + Video</b>
+  &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
+  <b>Output Feature Tracked Video</b>
+</div>
+
 ### Online mode: 
 ```python
 cotracker = torch.hub.load("facebookresearch/co-tracker", "cotracker3_online").to(device)
@@ -331,30 +352,4 @@ wget https://dl.fbaipublicfiles.com/cotracker/cotracker_stride_4_wind_12.pth
 wget https://dl.fbaipublicfiles.com/cotracker/cotracker_stride_8_wind_16.pth
 ```
 
-## License
 
-The majority of CoTracker is licensed under CC-BY-NC, however portions of the project are available under separate license terms: Particle Video Revisited is licensed under the MIT license, TAP-Vid and LocoTrack are licensed under the Apache 2.0 license.
-
-## Acknowledgments
-
-We would like to thank [PIPs](https://github.com/aharley/pips), [TAP-Vid](https://github.com/deepmind/tapnet), [LocoTrack](https://github.com/cvlab-kaist/locotrack) for publicly releasing their code and data. We also want to thank [Luke Melas-Kyriazi](https://lukemelas.github.io/) for proofreading the paper, [Jianyuan Wang](https://jytime.github.io/), [Roman Shapovalov](https://shapovalov.ro/) and [Adam W. Harley](https://adamharley.com/) for the insightful discussions.
-
-## Citing CoTracker
-
-If you find our repository useful, please consider giving it a star ⭐ and citing our research papers in your work:
-```bibtex
-@inproceedings{karaev23cotracker,
-  title     = {CoTracker: It is Better to Track Together},
-  author    = {Nikita Karaev and Ignacio Rocco and Benjamin Graham and Natalia Neverova and Andrea Vedaldi and Christian Rupprecht},
-  booktitle = {Proc. {ECCV}},
-  year      = {2024}
-}
-```
-```bibtex
-@inproceedings{karaev24cotracker3,
-  title     = {CoTracker3: Simpler and Better Point Tracking by Pseudo-Labelling Real Videos},
-  author    = {Nikita Karaev and Iurii Makarov and Jianyuan Wang and Natalia Neverova and Andrea Vedaldi and Christian Rupprecht},
-  booktitle = {Proc. {arXiv:2410.11831}},
-  year      = {2024}
-}
-```
